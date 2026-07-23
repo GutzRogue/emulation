@@ -21,6 +21,42 @@ impl Memory {
     }
 }
 
+impl Cpu {
+    fn fetch_byte(&mut self, mem: &Memory) -> u8 {
+        let next = mem.read_byte(self.program_counter);
+        self.program_counter += 1;
+        return next;
+    }
+
+    fn fetch_two_bytes(&mut self, mem: &Memory) -> u16 {
+        let low = self.fetch_byte(mem);
+        let high = self.fetch_byte(mem);
+
+        let new_pc = (high as u16) << 8 | (low as u16);
+        return new_pc;
+    }
+
+    fn ld_a_immediate(&mut self, mem: &Memory) {
+        self.register_a = self.fetch_byte(mem);
+    }
+
+    fn ld_b_immediate(&mut self, mem: &Memory) {
+        self.register_b = self.fetch_byte(mem);
+    }
+
+    fn noop(&self) {}
+
+    fn step(&mut self, mem: &Memory) {
+        let opcode = self.fetch_byte(mem);
+        match opcode {
+            0x00 => self.noop(),
+            0x3E => self.ld_a_immediate(mem),
+            0x06 => self.ld_b_immediate(mem),
+            _ => panic!("Unknown instruction: {:#04X}", opcode),
+        }
+    }
+}
+
 fn main() {
     let cpu = Cpu {
         register_a: 0,
