@@ -3,6 +3,7 @@ use std::u8;
 struct Cpu {
     register_a: u8,
     register_b: u8,
+    register_f: u8,
     program_counter: u16,
     halted: bool,
 }
@@ -22,6 +23,11 @@ impl Memory {
 }
 
 impl Cpu {
+    const ZERO_FLAG: u8 = 0b1000_0000;
+    const SUBTRACT_FLAG: u8 = 0b0100_0000;
+    const HALF_FLAG: u8 = 0b0010_0000;
+    const CARRY_FLAG: u8 = 0b0001_0000;
+
     fn fetch_byte(&mut self, mem: &Memory) -> u8 {
         let next = mem.read_byte(self.program_counter);
         self.program_counter += 1;
@@ -46,6 +52,26 @@ impl Cpu {
 
     fn noop(&self) {}
 
+    fn check_zero(&self) -> bool {
+        return self.register_f & Self::ZERO_FLAG == 0;
+    }
+
+    fn set_zero(&mut self, value: bool) {
+        if (value == true) {
+            self.register_f |= Self::ZERO_FLAG;
+        } else {
+            self.register_f &= !Self::ZERO_FLAG;
+        }
+    }
+
+    fn set_substract(&mut self, value: bool) {
+        if (value == true) {
+            self.register_f |= Self::SUBTRACT_FLAG;
+        } else {
+            self.register_f &= Self::SUBTRACT_FLAG;
+        }
+    }
+
     fn step(&mut self, mem: &Memory) {
         let opcode = self.fetch_byte(mem);
         match opcode {
@@ -61,6 +87,7 @@ fn main() {
     let cpu = Cpu {
         register_a: 0,
         register_b: 0,
+        register_f: 0,
         program_counter: 0,
         halted: false,
     };
