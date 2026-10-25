@@ -56,6 +56,10 @@ impl Cpu {
         return self.register_f & Self::ZERO_FLAG == 0;
     }
 
+    fn check_half_carry(&self) -> bool {
+        return self.register_f & Self::HALF_FLAG != 0;
+    }
+
     fn set_zero(&mut self, value: bool) {
         if (value == true) {
             self.register_f |= Self::ZERO_FLAG;
@@ -68,8 +72,39 @@ impl Cpu {
         if (value == true) {
             self.register_f |= Self::SUBTRACT_FLAG;
         } else {
-            self.register_f &= Self::SUBTRACT_FLAG;
+            self.register_f &= !Self::SUBTRACT_FLAG;
         }
+    }
+
+    fn set_half_carry(&mut self, value: bool) {
+        if (value == true) {
+            self.register_f |= Self::HALF_FLAG;
+        } else {
+            self.register_f &= !Self::HALF_FLAG;
+        }
+    }
+
+    fn set_carry(&mut self, value: bool) {
+        if (value == true) {
+            self.register_f |= Self::CARRY_FLAG;
+        } else {
+            self.register_f &= !Self::CARRY_FLAG;
+        }
+    }
+
+    fn inc_b(&mut self) {
+        let half_carry = (self.register_b & 0b0000_1111) == 0b0000_1111;
+        self.register_b = self.register_b.wrapping_add(1);
+        self.set_half_carry(half_carry);
+        self.set_zero(self.register_b == 0);
+        self.set_substract(false);
+    }
+
+    fn dec_b(&mut self) {
+        let half_carry = (self.register_b & 0b0000_0000) == 0b1111_0000;
+        self.register_b = self.register_b.wrapping_sub(1);
+        self.set_substract(true);
+        self.set_zero(self.register_b == 0);
     }
 
     fn step(&mut self, mem: &Memory) {
@@ -78,18 +113,34 @@ impl Cpu {
             0x00 => self.noop(),
             0x3E => self.ld_a_immediate(mem),
             0x06 => self.ld_b_immediate(mem),
+            0x04 => self.inc_b(),
             _ => panic!("Unknown instruction: {:#04X}", opcode),
         }
     }
 }
 
 fn main() {
-    let cpu = Cpu {
+    let mut cpu = Cpu {
         register_a: 0,
         register_b: 0,
         register_f: 0,
         program_counter: 0,
         halted: false,
     };
-    println!("Hello, world!");
+
+    let mut memory = Memory { data: [0; 65536] };
+
+    memory.data[0] = 0x06;
+    memory.data[1] = 0x0F;
+    memory.data[2] = 0x04;
+
+    cpu.step(&memory);
+
+    println!("After step 1: B = {}", cpu.register_b);
+    println!("PC = {}", cpu.program_counter);
+
+    cpu.step(&memory);
+
+    println!("After step 2: B = {}", cpu.register_b);
+    println!("PC = {}", cpu.program_counter);
 }
